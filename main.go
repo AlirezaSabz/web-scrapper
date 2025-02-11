@@ -15,6 +15,10 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
+	var pageLink string
+	fmt.Println(" Insert Website Address   : ")
+	fmt.Scanln(&pageLink)
+	// defaultPageLink :="https://castbox.fm/episode/The-Bonus-Christmas-Round-with-Alfie-Boe-%26-Michael-Ball-id6285457-id764035284?country=gb"
 
 	// create a collector and request to collect information
 	c := colly.NewCollector()
@@ -23,6 +27,7 @@ func main() {
 	c.OnHTML("audio source", func(e *colly.HTMLElement) {
 
 		link := e.Attr("src")
+
 		if strings.Contains(link, ".mp3") {
 			fileSize, err := getFileSize(link)
 			if err != nil {
@@ -35,7 +40,13 @@ func main() {
 
 			for i := 0; i < 5; i++ {
 				wg.Add(1)
-				go downloadPart(link, i, int(fileSize), &parts[i], &wg)
+				go func() {
+					err := downloadPart(link, i, int(fileSize), &parts[i], &wg)
+					if err != nil {
+						fmt.Println("ERROR download Part ", i+1, " :", err)
+						return
+					}
+				}()
 			}
 			wg.Wait()
 
@@ -58,7 +69,7 @@ func main() {
 		fmt.Println("Request To  :   ", r.URL)
 	})
 
-	c.Visit("https://castbox.fm/episode/The-Bonus-Christmas-Round-with-Alfie-Boe-%26-Michael-Ball-id6285457-id764035284?country=gb")
+	c.Visit(pageLink)
 
 }
 
@@ -86,7 +97,7 @@ func downloadPart(link string, partIndex int, fileSize int, part *[]byte, wg *sy
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
 
-		fmt.Println("ERROR In Copy Response ", partIndex, err)
+		fmt.Println("ERROR In Copy Response ", partIndex+1, err)
 		return err
 	}
 
